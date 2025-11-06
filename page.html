@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cars Commerce AI Project Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-button {
+            padding: 0.75rem 1rem;
+            font-medium;
+            color: #4B5563; 
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .nav-button.active {
+            color: #1E40AF;
+            border-bottom-color: #1E40AF;
+        }
+        .detail-tab {
+            padding: 0.5rem 1rem;
+            font-medium;
+            color: #4B5563;
+            background-color: #F3F4F6;
+            border: 1px solid #E5E7EB;
+            border-bottom: 0;
+            cursor: pointer;
+            margin-bottom: -1px;
+        }
+        .detail-tab.active {
+            background-color: #FFFFFF;
+            color: #1E40AF;
+            border-bottom-color: #FFFFFF;
+            position: relative;
+            z-index: 10;
+        }
+        .detail-tab-content {
+            border: 1px solid #E5E7EB;
+            background-color: #FFFFFF;
+            padding: 1.5rem;
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
+    </style>
+    <!-- Chosen Palette: Calm Neutral with Blue Accent -->
+    <!-- Application Structure Plan: The application is structured as an interactive SPA with two main views, accessible via tabs: "Dashboard" and "Project Deep Dive". This structure was chosen to serve two user needs: 1) a high-level strategic overview (Dashboard) and 2) a detailed exploration of individual projects (Deep Dive). The Dashboard uses charts to summarize the strategic focus and stakeholder value across all 8 projects. The Deep Dive view allows the user to select any project from a dropdown, which then dynamically renders its details (including a unique radar chart for its value proposition) and organizes its complex text into "How it Works," "Value," and "Challenges" tabs. This interactive, non-linear structure is superior to the report's linear list, as it allows stakeholders to quickly filter by strategic goal or explore projects based on their interests. -->
+    <!-- Visualization & Content Choices:
+        - App Navigation: Goal: Organize. Method: HTML/JS Tabs. Interaction: Click to show/hide main content panes. Justification: Standard SPA navigation, cleanly separates overview from detail. (No SVG/Mermaid).
+        - Dashboard - Project Focus: Goal: Compare. Method: Bar Chart (Chart.js/Canvas). Interaction: Hover for tooltips. Justification: Best way to show counts of projects against categorical data (pillars). (No SVG/Mermaid).
+        - Dashboard - Stakeholder Value: Goal: Compare (Proportions). Method: Donut Chart (Chart.js/Canvas). Interaction: Hover for tooltips. Justification: Clearly shows the proportional focus of value propositions for the entire portfolio. (No SVG/Mermaid).
+        - Deep Dive - Project Selector: Goal: Navigate. Method: HTML <select> dropdown. Interaction: Onchange event. Justification: A simple, space-efficient way to navigate 8 distinct items. (No SVG/Mermaid).
+        - Deep Dive - Value Scorecard: Goal: Compare (Profile). Method: Radar Chart (Chart.js/Canvas). Interaction: Dynamically updates on dropdown change. Justification: Perfectly visualizes the multi-dimensional "profile" of a single project's value prop. (No SVG/Mermaid).
+        - Deep Dive - Project Details: Goal: Inform/Organize. Method: HTML/JS Tabs. Interaction: Click to show/hide text blocks. Justification: Manages dense textual content for each project, making it digestible. (No SVG/Mermaid).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans leading-relaxed">
+
+    <div class="container max-w-6xl mx-auto p-4 md:p-8">
+        
+        <header class="mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Refined AI Project Pitches</h1>
+            <p class="text-lg text-gray-600">An interactive explorer for Cars Commerce AI initiatives.</p>
+        </header>
+
+        <nav class="flex border-b border-gray-300 mb-8">
+            <button class="nav-button active" data-view="dashboard">Dashboard</button>
+            <button class="nav-button" data-view="deepdive">Project Deep Dive</button>
+        </nav>
+
+        <main>
+            <div id="view-dashboard" class="view-pane">
+                <section class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Strategic Dashboard</h2>
+                    <p class="text-gray-700 mb-6">This dashboard provides a high-level overview of the 8 proposed AI projects, analyzing their strategic focus and the stakeholders they are designed to benefit. Use this to understand the overall shape and alignment of the AI initiative.</p>
+                </section>
+
+                <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4 text-center">Project Focus by Strategic Pillar</h3>
+                        <p class="text-sm text-gray-600 text-center mb-4">Shows how many projects align with each core strategic pillar. Pillars can be multi-counted.</p>
+                        <div class="chart-container">
+                            <canvas id="projectPillarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4 text-center">Stakeholder Value Analysis</h3>
+                        <p class="text-sm text-gray-600 text-center mb-4">Shows the distribution of value propositions across key stakeholders for all 8 projects.</p>
+                        <div class="chart-container">
+                            <canvas id="stakeholderValueChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="view-deepdive" class="view-pane hidden">
+                <section class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Project Deep Dive</h2>
+                    <p class="text-gray-700 mb-6">Select a project from the dropdown to explore its detailed mechanics, value proposition, and key challenges. The Value Scorecard visualizes where the project's primary impact lies.</p>
+                </section>
+
+                <section class="mb-6">
+                    <label for="projectSelector" class="block text-sm font-medium text-gray-700 mb-2">Select a Project:</label>
+                    <select id="projectSelector" class="w-full max-w-md p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    </select>
+                </section>
+
+                <section id="projectDetailsContainer" class="bg-white p-6 rounded-lg shadow-md">
+                </section>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        const projectData = {
+            "dynamic-vdp": {
+                title: "The Dynamic VDP (Vehicle Detail Page)",
+                pitch: "Our VDPs stop being static pages and become real-time, personal sales assistants that adapt to what each specific buyer cares about, measurably increasing leads.",
+                pillars: ["Growing Consumers", "Platform Advantages"],
+                howItWorks: {
+                    data: "Real-time: Referring URL, click-path, time on components. Contextual: Vehicle data, user persona.",
+                    model: "A real-time personalization engine. Starts as rules-based (IF-THEN) and evolves into a machine-learning model (collaborative filtering).",
+                    ux: "A shopper looking for 'best value' sees the payment calculator first. An enthusiast sees performance specs first."
+                },
+                valueProp: {
+                    dealer: "Higher VDP-to-lead conversion rate, more qualified leads.",
+                    consumer: "A faster, more relevant, less-frustrating shopping experience.",
+                    carsCommerce: "A powerful, defensible 'smart website' platform feature.",
+                    oem: null
+                },
+                challenges: "Must be lightning-fast to avoid 'page flicker' or layout shift (CLS), which hurts SEO and UX. Requires a robust data-gathering pipeline."
+            },
+            "generative-reviews": {
+                title: "Generative Review Summaries",
+                pitch: "We turn a dealer's 1,000+ scattered reviews into a 5-second, trustworthy summary that builds instant consumer confidence right on the VDP.",
+                pillars: ["Growing Consumers", "Growing Dealer Customers"],
+                howItWorks: {
+                    data: "Dealer-specific reviews (Cars.com, Google, DealerRater), model-specific reviews (Cars.com editorial).",
+                    model: "A Large Language Model (LLM) fine-tuned for abstractive summarization and topic/sentiment analysis.",
+                    ux: "A 'Review Snapshot' widget showing 'What Owners Love: +' and 'Common Callouts: !' with mention counts."
+                },
+                valueProp: {
+                    dealer: "Builds massive trust and transparency, neutralizes bad reviews by contextualizing them.",
+                    consumer: "Saves hours of research and provides an 'at-a-glance' social-proof snapshot.",
+                    carsCommerce: "Creates a new, engaging feature that leverages our proprietary review data.",
+                    oem: null
+                },
+                challenges: "Model 'hallucination' (making things up) is a risk. Requires a strong moderation filter to prevent inappropriate or nonsensical content."
+            },
+            "local-insights": {
+                title: "AI-Powered Local Market Insights",
+                pitch: "We provide dealers with an actionable, AI-driven dashboard that tells them precisely what their local market wants right now, and what to do about it.",
+                pillars: ["Growing Dealer Customers", "Platform Advantages"],
+                howItWorks: {
+                    data: "Aggregated, anonymized search data from dealer sites, local Google Search trends, Cars.com marketplace data, competitor pricing.",
+                    model: "A combination of time-series forecasting (to predict trends) and anomaly detection (to spot spikes).",
+                    ux: "A new tab in the dealer's admin panel. 'Insight: 42% spike in 'hybrid trucks' searches.' 'Recommendation: Feature your 2 Ford Maverick Hybrids on the homepage.'"
+                },
+                valueProp: {
+                    dealer: "Turns their website into an active business intelligence tool. Optimizes ad spend and merchandising.",
+                    consumer: null,
+                    carsCommerce: "A massive value-add that increases platform 'stickiness' and justifies a premium product tier.",
+                    oem: null
+                },
+                challenges: "Data needs to be truly local to be relevant. The insights must be actionable, not just 'interesting data.'"
+            },
+            "smart-scheduler": {
+                title: "Smart Service Scheduler",
+                pitch: "Our service scheduler doesn't just book appointments; it intelligently upsells the right OEM-recommended services at the right time, boosting ARO.",
+                pillars: ["Unlocking the Cross-Sell", "Growing Consumers"],
+                howItWorks: {
+                    data: "User's Make/Model/Year/Mileage, OEM-recommended service interval data, dealer's service 'specials' and pricing.",
+                    model: "A rules-based recommendation engine. (IF mileage > 75k AND no history THEN recommend 75k Service Package).",
+                    ux: "User books oil change, screen shows: 'Your 2019 CR-V is also due for its 75k-mile service. We can bundle this all for $149. [Add to Booking]'"
+                },
+                valueProp: {
+                    dealer: "A massive, automatic increase in the Average Repair Order (ARO) from web-based appointments.",
+                    consumer: "Genuinely helpful reminders that maintain vehicle health and warranty compliance.",
+                    carsCommerce: "A clear, measurable new revenue driver to prove platform ROI.",
+                    oem: null
+                },
+                challenges: "Integration with the dealer's (often archaic) DMS/scheduler system is the biggest hurdle. Data accuracy of OEM intervals is critical."
+            },
+            "fi-recommender": {
+                title: "F&I Recommendation Engine",
+                pitch: "We start the F&I conversation online in a helpful, educational, low-pressure environment, warming up the customer so the F&I manager can close more effectively.",
+                pillars: ["Unlocking the Cross-Sell", "Platform Advantages"],
+                howItWorks: {
+                    data: "Vehicle data (New/Used, Price, Warranty), loan terms (Length, APR), user data (e.g., 'commute=long').",
+                    model: "A predictive model (e.g., logistic regression) that matches user/vehicle profiles to F&I products. (e.g., 72-month loan -> High propensity for GAP).",
+                    ux: "Integrated into the payment calculator. A small, helpful tip: 'Planning a 72-month loan? Many buyers add GAP Protection... [Learn More]'"
+                },
+                valueProp: {
+                    dealer: "Higher F&I product penetration (take-rate), as customers are pre-educated and pre-sold.",
+                    consumer: "Demystifies F&I products and allows them to learn on their own time, without pressure.",
+                    carsCommerce: "Creates another clear cross-sell revenue stream.",
+                    oem: null
+                },
+                challenges: "Strict legal and compliance rules. Must be framed as 'educational' to avoid 'steering' or making uninsured promises."
+            },
+            "oem-compliance": {
+                title: "AI-Powered OEM Brand Compliance",
+                pitch: "We offer OEMs a real-time compliance dashboard, guaranteeing their brand and legal disclaimers are 100% correct across our entire dealer network.",
+                pillars: ["Transforming OEM Relationships", "Growing Dealer Customers"],
+                howItWorks: {
+                    data: "OEM Brand Guidelines (logos, fonts, colors), OEM monthly/quarterly incentive/offer legal disclaimers.",
+                    model: "A Computer Vision model to check logos/layouts. A Natural Language Processing (NLP) model to read ad copy and legal disclaimers.",
+                    ux: "Internal dashboard for Cars Commerce and B2B report for OEM. 'Compliance Scan Complete: 98% compliant. 15 sites are non-compliant. [Click to Auto-Correct All]'"
+                },
+                valueProp: {
+                    dealer: "Avoids costly compliance chargebacks from the OEM.",
+                    consumer: null,
+                    carsCommerce: "A massive, unique selling proposition to win enterprise-level OEM 'preferred vendor' contracts.",
+                    oem: "Solves one of their biggest, most expensive legal and brand-safety headaches."
+                },
+                challenges: "Getting the 'ground truth' data from (often disorganized) OEMs is the hardest part. The NLP model must be extremely accurate."
+            },
+            "voice-of-shopper": {
+                title: "Aggregated Local Market 'Voice of the Shopper'",
+                pitch: "We provide OEMs with a real-time dashboard showing what their customers are searching for, clicking on, and asking about on dealer sites at a local level.",
+                pillars: ["Transforming OEM Relationships", "Platform Advantages"],
+                howItWorks: {
+                    data: "All data from 'Dynamic VDP' interactions, 'AI Matchmaker' chatbot queries, and on-site search bar entries. All data is anonymized and aggregated.",
+                    model: "Topic modeling and trend/anomaly analysis. The AI clusters millions of search queries and chat logs into themes.",
+                    ux: "A B2B data-as-a-service (DaaS) product. 'In the [Southeast], consumer questions about your new EV have shifted from 'Range' to 'Insurance Cost' (up 300%).'"
+                },
+                valueProp: {
+                    dealer: null,
+                    consumer: null,
+                    carsCommerce: "A brand new, high-margin, B2B data revenue stream.",
+                    oem: "Real-time, localized market intelligence they cannot get anywhere else. Helps them tailor national marketing."
+                },
+                challenges: "Strict data privacy and anonymization are non-negotiable."
+            },
+            "predictive-inventory": {
+                title: "Predictive Inventory & Pricing Model",
+                pitch: "Our platform doesn't just host your inventory; it tells you what used cars to buy at auction and how to price them to sell in under 30 days.",
+                pillars: ["Platform Advantages", "Growing Dealer Customers"],
+                howItWorks: {
+                    data: "Network's 'days-on-lot' data, VDP view counts, lead counts (demand signals), local market supply (Cars.com data), auction-house 'run lists.'",
+                    model: "A predictive model (e.g., XGBoost or a neural network) trained to forecast 'days-to-sale' and 'optimal price point' for a specific VIN in a specific ZIP code.",
+                    ux: "A new 'Acquisition' tab. 'Auction Hot List: [2022 Honda CR-V]... Our model predicts a 15-day sale at [Price]. [Recommended Max Bid: $X]'"
+                },
+                valueProp: {
+                    dealer: "The holy grail. Optimizes inventory turn, increases profit margins, and reduces floorplan costs.",
+                    consumer: null,
+                    carsCommerce: "The ultimate platform 'stickiness.' Transitions you from a 'website provider' to a 'profitability partner.'",
+                    oem: null
+                },
+                challenges: "This is the most complex model to build and maintain. The model's accuracy must be exceptionally high to be trusted."
+            }
+        };
+
+        const chartInstances = {};
+
+        function wrapLabel(str, maxLen = 16) {
+            if (str.length <= maxLen) {
+                return str;
+            }
+            const words = str.split(' ');
+            let lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + ' ' + word).trim().length > maxLen) {
+                    if (currentLine) {
+                        lines.push(currentLine);
+                    }
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            }
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            return lines;
+        }
+
+        const chartTooltipCallbacks = {
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            const item = tooltipItems[0];
+                            let label = item.chart.data.labels[item.dataIndex];
+                            if (Array.isArray(label)) {
+                              return label.join(' ');
+                            } else {
+                              return label;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        function initDashboardCharts() {
+            const pillarCounts = {};
+            const stakeholderCounts = { Dealer: 0, Consumer: 0, "Cars Commerce": 0, OEM: 0 };
+
+            Object.values(projectData).forEach(project => {
+                project.pillars.forEach(pillar => {
+                    pillarCounts[pillar] = (pillarCounts[pillar] || 0) + 1;
+                });
+                if (project.valueProp.dealer) stakeholderCounts.Dealer++;
+                if (project.valueProp.consumer) stakeholderCounts.Consumer++;
+                if (project.valueProp.carsCommerce) stakeholderCounts["Cars Commerce"]++;
+                if (project.valueProp.oem) stakeholderCounts.OEM++;
+            });
+
+            const pillarCtx = document.getElementById('projectPillarChart').getContext('2d');
+            chartInstances.pillar = new Chart(pillarCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(pillarCounts).map(label => wrapLabel(label)),
+                    datasets: [{
+                        label: '# of Projects',
+                        data: Object.values(pillarCounts),
+                        backgroundColor: '#3B82F6',
+                        borderColor: '#1E40AF',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    ...chartTooltipCallbacks
+                }
+            });
+
+            const stakeholderCtx = document.getElementById('stakeholderValueChart').getContext('2d');
+            chartInstances.stakeholder = new Chart(stakeholderCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(stakeholderCounts),
+                    datasets: [{
+                        label: 'Value Propositions',
+                        data: Object.values(stakeholderCounts),
+                        backgroundColor: ['#1E40AF', '#3B82F6', '#93C5FD', '#BFDBFE'],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    ...chartTooltipCallbacks
+                }
+            });
+        }
+
+        function populateProjectSelector() {
+            const selector = document.getElementById('projectSelector');
+            Object.keys(projectData).forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = projectData[key].title;
+                selector.appendChild(option);
+            });
+            selector.addEventListener('change', (e) => {
+                displayProjectDetails(e.target.value);
+            });
+        }
+
+        function displayProjectDetails(projectId) {
+            const project = projectData[projectId];
+            const container = document.getElementById('projectDetailsContainer');
+
+            if (!project) {
+                container.innerHTML = `<p class="text-red-500">Error: Project not found.</p>`;
+                return;
+            }
+
+            const howItWorksHtml = `
+                <div class="mb-4">
+                    <h5 class="font-semibold text-gray-800">Data Inputs:</h5>
+                    <p class="text-gray-700">${project.howItWorks.data}</p>
+                </div>
+                <div class="mb-4">
+                    <h5 class="font-semibold text-gray-800">AI Model/Logic:</h5>
+                    <p class="text-gray-700">${project.howItWorks.model}</p>
+                </div>
+                <div>
+                    <h5 class="font-semibold text-gray-800">User/Dealer Experience (UX):</h5>
+                    <p class="text-gray-700">${project.howItWorks.ux}</p>
+                </div>
+            `;
+
+            const valuePropHtml = `
+                <ul class="list-disc list-inside space-y-2">
+                    ${project.valueProp.dealer ? `<li class="text-gray-700"><strong class="text-gray-900">For the Dealer:</strong> ${project.valueProp.dealer}</li>` : ''}
+                    ${project.valueProp.consumer ? `<li class="text-gray-700"><strong class="text-gray-900">For the Consumer:</strong> ${project.valueProp.consumer}</li>` : ''}
+                    ${project.valueProp.carsCommerce ? `<li class="text-gray-700"><strong class="text-gray-900">For Cars Commerce:</strong> ${project.valueProp.carsCommerce}</li>` : ''}
+                    ${project.valueProp.oem ? `<li class="text-gray-700"><strong class="text-gray-900">For the OEM:</strong> ${project.valueProp.oem}</li>` : ''}
+                </ul>
+            `;
+            
+            const challengesHtml = `<p class="text-gray-700">${project.challenges}</p>`;
+
+            container.innerHTML = `
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">${project.title}</h3>
+                <p class="text-lg italic text-gray-600 mb-6">${project.pitch}</p>
+                
+                <div class="mb-4">
+                    <span class="font-semibold">Strategic Pillars:</span>
+                    ${project.pillars.map(p => `<span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">${p}</span>`).join('')}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                    <div>
+                        <h4 class="text-xl font-semibold text-gray-900 mb-4 text-center">Value Scorecard</h4>
+                        <div class="chart-container" style="max-height: 350px;">
+                            <canvas id="projectValueRadarChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex border-b border-gray-300">
+                            <button class="detail-tab active" data-tab="how">How It Works</button>
+                            <button class="detail-tab" data-tab="value">Value Proposition</button>
+                            <button class="detail-tab" data-tab="challenges">Challenges</button>
+                        </div>
+                        <div class="detail-tab-content" id="tab-content-how">${howItWorksHtml}</div>
+                        <div class="detail-tab-content hidden" id="tab-content-value">${valuePropHtml}</div>
+                        <div class="detail-tab-content hidden" id="tab-content-challenges">${challengesHtml}</div>
+                    </div>
+                </div>
+            `;
+
+            createProjectRadarChart(project);
+            setupDetailTabs();
+        }
+
+        function createProjectRadarChart(project) {
+            if (chartInstances.radar) {
+                chartInstances.radar.destroy();
+            }
+            const radarCtx = document.getElementById('projectValueRadarChart').getContext('2d');
+            const data = [
+                project.valueProp.dealer ? 1 : 0,
+                project.valueProp.consumer ? 1 : 0,
+                project.valueProp.carsCommerce ? 1 : 0,
+                project.valueProp.oem ? 1 : 0
+            ];
+            
+            chartInstances.radar = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Dealer', 'Consumer', 'Cars Commerce', 'OEM'],
+                    datasets: [{
+                        label: 'Value Focus',
+                        data: data,
+                        fill: true,
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    elements: {
+                        line: {
+                            borderWidth: 3
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: false
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 1,
+                            ticks: {
+                                display: false,
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    ...chartTooltipCallbacks
+                }
+            });
+        }
+
+        function setupDetailTabs() {
+            const tabs = document.querySelectorAll('.detail-tab');
+            const contents = document.querySelectorAll('.detail-tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const target = tab.getAttribute('data-tab');
+                    
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    contents.forEach(c => {
+                        if (c.id === `tab-content-${target}`) {
+                            c.classList.remove('hidden');
+                        } else {
+                            c.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+        }
+
+        function setupNavTabs() {
+            const navButtons = document.querySelectorAll('.nav-button');
+            const viewPanes = document.querySelectorAll('.view-pane');
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const view = button.getAttribute('data-view');
+                    
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    viewPanes.forEach(pane => {
+                        if (pane.id === `view-${view}`) {
+                            pane.classList.remove('hidden');
+                        } else {
+                            pane.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupNavTabs();
+            initDashboardCharts();
+            populateProjectSelector();
+            displayProjectDetails(document.getElementById('projectSelector').value);
+        });
+
+    </script>
+</body>
+</html>
